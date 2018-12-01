@@ -9,6 +9,7 @@ import com.yexuejc.base.util.StrUtil;
 import com.yexuejc.springboot.base.autoconfigure.MutiRedisAutoConfiguration;
 import com.yexuejc.springboot.base.constant.BizConsts;
 import com.yexuejc.springboot.base.exception.ThirdPartyAuthorizationException;
+import com.yexuejc.springboot.base.exception.UserNotAuthoriayException;
 import com.yexuejc.springboot.base.security.ConsumerAuthenticationProcessingFilter;
 import com.yexuejc.springboot.base.security.ConsumerUser;
 import com.yexuejc.springboot.base.security.LoginToken;
@@ -20,9 +21,12 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.*;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.web.context.SecurityContextRepository;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +53,35 @@ public class MySecurityConfig extends SecurityConfig {
     @Autowired
     @Qualifier(MutiRedisAutoConfiguration.BEAN_REDIS_TEMPLATE0)
     private RedisTemplate<Object, Object> redisTemplate0;
+
+    @Override
+    protected RedisTemplate<Object, Object> getRedisDB() {
+        return redisTemplate0;
+    }
+
+    //自定义==================================================================
+
+    @Override
+    protected AuthenticationProvider createConsumerAuthenticationProvider(UserDetailsService userDetailsService) {
+        return super.createConsumerAuthenticationProvider(userDetailsService);
+    }
+
+    @Override
+    protected ConsumerAuthenticationProcessingFilter createConsumerAuthenticationProcessingFilter(AuthenticationManager authenticationManager) {
+        return super.createConsumerAuthenticationProcessingFilter(authenticationManager);
+    }
+
+    @Override
+    protected SecurityContextRepository createConsumerSecurityContextRepository() {
+        return super.createConsumerSecurityContextRepository();
+    }
+
+    @Override
+    protected UserDetailsService createUserDetailsManager() {
+        return super.createUserDetailsManager();
+    }
+    //自定义==================================================================
+
 
     /**
      * 保存登录信息至redis
@@ -127,6 +160,8 @@ public class MySecurityConfig extends SecurityConfig {
                 resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_PWD_IS_ERR_MSG});
             } else if (exception instanceof UsernameNotFoundException) {
                 resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_ACCOUNT_NOT_FOUND_MSG});
+            } else if (exception instanceof UserNotAuthoriayException) {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{exception.getMessage()});
             } else {
                 resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_SYS_ERR_MSG});
             }
@@ -185,4 +220,5 @@ public class MySecurityConfig extends SecurityConfig {
             response.getWriter().close();
         });
     }
+
 }

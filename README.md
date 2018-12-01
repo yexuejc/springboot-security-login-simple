@@ -1,7 +1,20 @@
 https://github.com/yexuejc/yexuejc-springboot 多方登录模块使用例子
 ---------------------------------------------------------------
 
-### 相关文件说明 所有核心文件都在 com.yexuejc.springboot.base.security 包下
+#### 先上[效果图](Securtity效果图.md)
+
+> **引入依赖 pom.xml**
+
+```mxml
+ <dependency>
+    <groupId>com.yexuejc.springboot</groupId>
+    <artifactId>yexuejc-springboot-base</artifactId>
+    <version>最新版</version>
+</dependency>
+```
+#### 所有核心文件都在 com.yexuejc.springboot.base.security 包下
+#### 现附上系统实现逻辑图
+![多方登录系统实现逻辑图](sl/多方登录设计.jpg)
 
 
 1.com.yexuejc.springboot.base.security.SecurityConfig
@@ -12,6 +25,38 @@ https://github.com/yexuejc/yexuejc-springboot 多方登录模块使用例子
 * 实现loginHodler()方法；自定义处理登录成功filter.setAuthenticationSuccessHandler()和失败filter.setAuthenticationFailureHandler()的处理
 * 继承configure(HttpSecurity http) 完善更多security过滤配置
 * 例子[com.yexuejc.springboot.base.security.MySecurityConfig](../yexuejc-springboot-base/src/test/java/com/yexuejc/springboot/base/security/MySecurityConfig.java)
+
+#### 注： 代码中抛出的相关异常拦截在filter.setAuthenticationFailureHandler()中处理，参考[MySecurityConfig](../yexuejc-springboot-base/src/test/java/com/yexuejc/springboot/base/security/MySecurityConfig.java)
+```
+filter.setAuthenticationFailureHandler((request, response, exception) -> {
+            response.setContentType("application/json;charset=UTF-8");
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            Resps resps = new Resps();
+            if (exception instanceof DisabledException) {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_IS_LOCK_MSG});
+            } else if (exception instanceof AccountExpiredException) {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_IS_EXPIRE_MSG});
+            } else if (exception instanceof CredentialsExpiredException) {
+                resps.setErr(BizConsts.BASE_LOGIN_IS_EXPIRE_CODE, new String[]{BizConsts.BASE_LOGIN_IS_EXPIRE_MSG});
+            } else if (exception instanceof LockedException) {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_IS_LOCKED_MSG});
+            } else if (exception instanceof AuthenticationCredentialsNotFoundException) {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_CREDENTIALS_NOT_FOUND_MSG});
+            } else if (exception instanceof ThirdPartyAuthorizationException) {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{exception.getMessage()});
+            } else if (exception instanceof BadCredentialsException) {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_PWD_IS_ERR_MSG});
+            } else if (exception instanceof UsernameNotFoundException) {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_ACCOUNT_NOT_FOUND_MSG});
+            } else if (exception instanceof UserNotAuthoriayException) {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{exception.getMessage()});
+            } else {
+                resps.setErr(RespsConsts.CODE_FAIL, new String[]{BizConsts.BASE_SYS_ERR_MSG});
+            }
+            response.getWriter().write(JsonUtil.obj2Json(resps));
+            response.getWriter().close();
+        });
+```
 
 2.com.yexuejc.springboot.base.security.UserDetailsManager
 <br/>
